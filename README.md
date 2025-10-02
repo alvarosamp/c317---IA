@@ -193,7 +193,7 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 ## 👥 Equipe
 
-- **Desenvolvedor Principal**: Álvaro Sampaio
+- **Desenvolvedoes**: Álvaro Sampaio, Diego Rodrigues, Pedro Bressan
 - **Curso**: C317 - Inteligência Artificial
 
 ## 🔗 Links Úteis

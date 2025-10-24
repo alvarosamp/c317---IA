@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Teste - Avaliação de Pronúncia com IA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input[type="text"],
+        input[type="file"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .result.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .score {
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .score.high { color: #28a745; }
+        .score.medium { color: #ffc107; }
+        .score.low { color: #dc3545; }
+        
+        .feedback-section {
+            margin-top: 20px;
+        }
+        
+        .feedback-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .feedback-content {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .error-list,
+        .suggestion-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .error-list li::before {
+            content: "❌ ";
+        }
+        
+        .suggestion-list li::before {
+            content: "💡 ";
+        }
+        
+        .error-list li,
+        .suggestion-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .error-list li:last-child,
+        .suggestion-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .highlights {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .highlight-box {
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .highlight-box.correct {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        
+        .highlight-box.incorrect {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .highlight-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .loader {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .loader.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #dc3545;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            color: #666;
+            transition: all 0.3s;
+            width: auto;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            font-weight: 600;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Avaliação de Pronúncia com IA</h1>
+        <p class="subtitle">Sistema Inteligente - Projeto C317</p>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('avaliar')">Avaliar Pronúncia</button>
+            <button class="tab" onclick="switchTab('tutor')">Tutor IA</button>
+        </div>
+        
+        <!-- TAB: Avaliar Pronúncia -->
+        <div id="tab-avaliar" class="tab-content active">
+            <form id="avaliarForm">
+                <div class="form-group">
+                    <label for="userId">ID do Usuário:</label>
+                    <input type="text" id="userId" value="demo_teste" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="targetWord">Palavra/Frase Alvo:</label>
+                    <input type="text" id="targetWord" placeholder="Ex: hello, beautiful" value="hello" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="audioFile">Arquivo de Áudio:</label>
+                    <input type="file" id="audioFile" accept="audio/*" required>
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        Formatos: .wav, .mp3, .opus, .m4a
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="provider">Modelo de Transcrição:</label>
+                    <select id="provider">
+                        <option value="whisper">Whisper (Local - Grátis)</option>
+                        <option value="openai">OpenAI Whisper (API - Pago)</option>
+                        <option value="gemini">Gemini (Google - Grátis)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="aiScoring" checked>
+                    <label for="aiScoring" style="margin: 0;">Usar IA para Avaliação (Recomendado)</label>
+                </div>
+                
+                <div class="form-group" id="scoringProviderGroup">
+                    <label for="scoringProvider">Modelo de Avaliação:</label>
+                    <select id="scoringProvider">
+                        <option value="gemini">Gemini (Google - Grátis)</option>
+                        <option value="openai">OpenAI GPT (Pago - Mais Preciso)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="language">Idioma:</label>
+                    <select id="language">
+                        <option value="português">Português</option>
+                        <option value="inglês" selected>Inglês</option>
+                        <option value="espanhol">Espanhol</option>
+                        <option value="francês">Francês</option>
+                    </select>
+                </div>
+                
+                <button type="submit" id="submitBtn">🎤 Avaliar Pronúncia</button>
+            </form>
+            
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px; color: #666;">Processando áudio...</p>
+            </div>
+            
+            <div class="error-message" id="errorMessage"></div>
+            
+            <div class="result" id="result">
+                <h2 style="color: #667eea; text-align: center;">Resultado da Avaliação</h2>
+                <div class="score" id="scoreDisplay">--</div>
+                
+                <div class="feedback-section">
+                    <div class="feedback-title">💬 Feedback Detalhado</div>
+                    <div class="feedback-content" id="feedbackContent">
+                        Carregando...
+                    </div>
+                </div>
+                
+                <div class="feedback-section" id="errorsSection" style="display: none;">
+                    <div class="feedback-title">❌ Erros Detectados</div>
+                    <ul class="error-list" id="errorsList"></ul>
+                </div>
+                
+                <div class="feedback-section" id="suggestionsSection" style="display: none;">
+                    <div class="feedback-title">💡 Sugestões de Melhoria</div>
+                    <ul class="suggestion-list" id="suggestionsList"></ul>
+                </div>
+                
+                <div class="feedback-section" id="highlightsSection" style="display: none;">
+                    <div class="feedback-title">🎯 Análise Detalhada</div>
+                    <div class="highlights">
+                        <div class="highlight-box correct">
+                            <div class="highlight-title">✅ Acertos</div>
+                            <div id="correctList"></div>
+                        </div>
+                        <div class="highlight-box incorrect">
+                            <div class="highlight-title">❌ Erros</div>
+                            <div id="incorrectList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- TAB: Tutor IA -->
+        <div id="tab-tutor" class="tab-content">
+            <form id="tutorForm">
+                <div class="form-group">
+                    <label for="tutorQuestion">Faça uma pergunta sobre pronúncia:</label>
+                    <input type="text" id="tutorQuestion" 
+                           placeholder="Ex: Como pronunciar o TH em inglês?" 
+                           required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tutorProvider">Modelo de IA:</label>
+                    <select id="tutorProvider">
+                        <option value="gemini">Gemini (Google - Grátis)</option>
+                        <option value="openai">OpenAI GPT (Pago)</option>
+                    </select>
+                </div>
+                
+                <button type="submit" id="tutorBtn">💬 Perguntar ao Tutor</button>
+            </form>
+            
+            <div class="loader" id="tutorLoader">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px; color: #666;">Consultando tutor...</p>
+            </div>
+            
+            <div class="error-message" id="tutorError"></div>
+            
+            <div class="result" id="tutorResult">
+                <div class="feedback-section">
+                    <div class="feedback-title">👨‍🏫 Resposta do Tutor</div>
+                    <div class="feedback-content" id="tutorReply" style="white-space: pre-line;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'http://localhost:8000';
+        
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+        
+        // Toggle scoring provider visibility
+        document.getElementById('aiScoring').addEventListener('change', (e) => {
+            document.getElementById('scoringProviderGroup').style.display = 
+                e.target.checked ? 'block' : 'none';
+        });
+        
+        // Form: Avaliar Pronúncia
+        document.getElementById('avaliarForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const loader = document.getElementById('loader');
+            const result = document.getElementById('result');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Reset
+            result.classList.remove('show');
+            errorMessage.classList.remove('show');
+            
+            // Show loader
+            submitBtn.disabled = true;
+            loader.classList.add('show');
+            
+            try {
+                const formData = new FormData();
+                formData.append('user_id', document.getElementById('userId').value);
+                formData.append('target_word', document.getElementById('targetWord').value);
+                formData.append('audio', document.getElementById('audioFile').files[0]);
+                formData.append('provider', document.getElementById('provider').value);
+                formData.append('ai_scoring', document.getElementById('aiScoring').checked);
+                formData.append('scoring_provider', document.getElementById('scoringProvider').value);
+                formData.append('language', document.getElementById('language').value);
+                
+                const response = await fetch(`${API_URL}/avaliar`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Display score
+                const scoreEl = document.getElementById('scoreDisplay');
+                scoreEl.textContent = `${data.score}/100`;
+                scoreEl.className = 'score';
+                if (data.score >= 80) scoreEl.classList.add('high');
+                else if (data.score >= 50) scoreEl.classList.add('medium');
+                else scoreEl.classList.add('low');
+                
+                // Display feedback
+                document.getElementById('feedbackContent').textContent = 
+                    data.feedback || 'Sem feedback disponível';
+                
+                // Display errors
+                if (data.errors && data.errors.length > 0) {
+                    document.getElementById('errorsSection').style.display = 'block';
+                    document.getElementById('errorsList').innerHTML = 
+                        data.errors.map(e => `<li>${e}</li>`).join('');
+                } else {
+                    document.getElementById('errorsSection').style.display = 'none';
+                }
+                
+                // Display suggestions
+                if (data.suggestions && data.suggestions.length > 0) {
+                    document.getElementById('suggestionsSection').style.display = 'block';
+                    document.getElementById('suggestionsList').innerHTML = 
+                        data.suggestions.map(s => `<li>${s}</li>`).join('');
+                } else {
+                    document.getElementById('suggestionsSection').style.display = 'none';
+                }
+                
+                // Display highlights
+                if (data.highlights) {
+                    document.getElementById('highlightsSection').style.display = 'block';
+                    document.getElementById('correctList').innerHTML = 
+                        (data.highlights.correct || []).join(', ') || 'Nenhum';
+                    document.getElementById('incorrectList').innerHTML = 
+                        (data.highlights.incorrect || []).join(', ') || 'Nenhum';
+                } else {
+                    document.getElementById('highlightsSection').style.display = 'none';
+                }
+                
+                result.classList.add('show');
+                
+            } catch (error) {
+                errorMessage.textContent = `Erro: ${error.message}. Verifique se a API está rodando em ${API_URL}`;
+                errorMessage.classList.add('show');
+            } finally {
+                submitBtn.disabled = false;
+                loader.classList.remove('show');
+            }
+        });
+        
+        // Form: Tutor
+        document.getElementById('tutorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('tutorBtn');
+            const loader = document.getElementById('tutorLoader');
+            const result = document.getElementById('tutorResult');
+            const errorMessage = document.getElementById('tutorError');
+            
+            // Reset
+            result.classList.remove('show');
+            errorMessage.classList.remove('show');
+            
+            // Show loader
+            submitBtn.disabled = true;
+            loader.classList.add('show');
+            
+            try {
+                const formData = new FormData();
+                formData.append('message', document.getElementById('tutorQuestion').value);
+                formData.append('provider', document.getElementById('tutorProvider').value);
+                
+                const response = await fetch(`${API_URL}/tutor_pronuncia`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                document.getElementById('tutorReply').textContent = data.reply;
+                result.classList.add('show');
+                
+            } catch (error) {
+                errorMessage.textContent = `Erro: ${error.message}. Verifique se a API está rodando em ${API_URL}`;
+                errorMessage.classList.add('show');
+            } finally {
+                submitBtn.disabled = false;
+                loader.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>

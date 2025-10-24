@@ -4,7 +4,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.68+-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-Sistema inteligente para avaliação automática de pronúncia utilizando múltiplos modelos de Speech-to-Text (STT) e algoritmos de similaridade textual.
+Sistema inteligente para avaliação automática de pronúncia utilizando múltiplos modelos de Speech-to-Text (STT), algoritmos de similaridade textual e recursos de IA generativa, incluindo integração com o modelo Gemini (Google).
 
 ## 📖 Sobre o Projeto
 
@@ -13,6 +13,7 @@ Este projeto implementa uma API REST que permite avaliar a qualidade da pronúnc
 ### Características Principais
 
 - **Múltiplos Modelos STT**: Suporte para Whisper, Wav2Vec2, DeepSpeech, Coqui STT e Faster Whisper
+- **IA Generativa**: Integração com o modelo Gemini (Google) para análise, feedback e geração de relatórios personalizados
 - **API REST**: Interface simples e eficiente com FastAPI
 - **Algoritmo de Scoring**: Sistema de pontuação baseado na distância de Levenshtein
 - **Testes Automatizados**: Cobertura completa de testes com pytest
@@ -134,7 +135,7 @@ Para gerar relatório de cobertura:
 pytest --cov=../core --cov=../../models --cov-report=html
 ```
 
-## 🤖 Modelos Suportados
+## 🤖 Modelos e IAs Suportados
 
 ### 1. **Whisper** (Padrão)
 
@@ -158,10 +159,17 @@ pytest --cov=../core --cov=../../models --cov-report=html
 - Características: Open source, personalizável
 - Uso: Implementações customizadas
 
+
 ### 5. **Faster Whisper**
 
 - Características: Versão otimizada do Whisper
 - Uso: Melhor performance em produção
+
+### 6. **Gemini (Google)**
+
+- Modelo de IA generativa de última geração
+- Utilizado para análise semântica, feedback textual e geração de relatórios
+- Permite respostas mais naturais e contextualizadas
 
 ## 📊 Sistema de Pontuação
 
@@ -191,17 +199,36 @@ O sistema utiliza uma combinação de métricas:
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
+
 ## 👥 Equipe
 
-- **Desenvolvedoes**: Álvaro Sampaio, Diego Rodrigues, Pedro Bressan
+- **Desenvolvedores**: Álvaro Sampaio, Diego Rodrigues, Pedro Bressan
 - **Curso**: C317 - Inteligência Artificial
 
-## 🔗 Links Úteis
+## � Como Citar
+
+Se este projeto foi útil para sua pesquisa ou trabalho, cite da seguinte forma:
+
+```
+@misc{pronuncia-ia,
+   author = {Álvaro Sampaio and Diego Rodrigues and Pedro Bressan},
+   title = {Sistema de Avaliação de Pronúncia com IA},
+   year = {2025},
+   howpublished = {\url{https://github.com/alvarosamp/c317---IA}}
+}
+```
+
+## �🔗 Links Úteis
 
 - [Documentação FastAPI](https://fastapi.tiangolo.com/)
 - [Whisper OpenAI](https://openai.com/research/whisper)
 - [Transformers Hugging Face](https://huggingface.co/transformers/)
+- [Gemini (Google AI)](https://deepmind.google/technologies/gemini/)
 
 ## 📞 Suporte
 
-Para dúvidas e suporte, abra uma issue no repositório ou entre em contato através do email institucional.
+Para dúvidas e suporte, abra uma issue no repositório ou envie um e-mail para:
+
+suporte@exemplo.com
+
+Ou utilize o e-mail institucional dos desenvolvedores.

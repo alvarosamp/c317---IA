@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, Form
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 import os 
 import sys 
 import pathlib
@@ -68,12 +69,12 @@ whisper_model = None  # Usar apenas Gemini (sem Whisper local)
 # Razão: LLMs oferecem feedback pedagógico superior
 # ============================================================================
 
-async def _salvar_upload_temporario(arquivo: UploadFile) -> str:
-    data = await arquivo.read()
-    suffix = os.path.splitext(arquivo.filename or "")[1] or ".wav"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(data)
-        return tmp.name
+
+# Função dummy para simular caminho de áudio (já que não há upload de arquivo)
+def _get_audio_path(audio_dict):
+    # Aqui você pode implementar lógica para buscar o arquivo pelo nome, se necessário
+    # Por enquanto, só retorna o nome
+    return audio_dict.get("name", "")
 
 def _normalizar_provedor(provedor: str) -> str:
     return (provedor or "gemini").lower()  # MUDADO: gemini como padrão
@@ -89,15 +90,25 @@ def _transcrever_arquivo(caminho_tmp: str, provedor: str) -> str:
     # Se pedir whisper, usar gemini
     return GeminiTranscriber().transcribe(caminho_tmp)
 
+
+# Função para processar upload de arquivo e transcrever
 async def _transcrever_upload(audio: UploadFile, provedor: str) -> str:
-    tmp_path = await _salvar_upload_temporario(audio)
+    data = await audio.read()
+    suffix = os.path.splitext(audio.filename or "")[1] or ".wav"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(data)
+        tmp_path = tmp.name
     try:
         return _transcrever_arquivo(tmp_path, provedor)
     finally:
         try:
             os.remove(tmp_path)
-        except:
+        except Exception:
             pass
+
+
+# _transcrever_upload não é mais usado pelo endpoint /avaliar (JSON)
+
 
 def _resposta_chat_texto(texto: str, provedor: str, sistema: str) -> str:
     prov = _normalizar_provedor(provedor)
@@ -112,17 +123,17 @@ async def avaliar(
     user_id: str = Form(...),
     target_word: str = Form(...),
     audio: UploadFile = Form(...),
-    provider: str = Form("whisper"),  # whisper | openai | gemini - para transcrição
-    ai_scoring: bool = Form(True),  # Usar IA para avaliação? (padrão: True)
-    scoring_provider: str = Form("openai"),  # openai | gemini - para avaliação
-    language: str = Form("português"),  # Idioma para contextualizar avaliação
+    ai_scoring: bool = Form(True),
+    language: str = Form("português")
 ):
+    provider = "gemini"
+    scoring_provider = "gemini"
     """
     🎯 Endpoint PRINCIPAL para avaliar a pronúncia com IA.
     
     **Fluxo:**
     1. Transcreve o áudio (Whisper local OU OpenAI/Gemini)
-    2. Avalia com GPT/Gemini (feedback qualitativo detalhado)
+    2. Avalia com GPT/Gemini (feedback qualitativa detalhado)
     
     **Parâmetros:**
     - user_id: ID do usuário
@@ -140,26 +151,43 @@ async def avaliar(
     - errors: Lista de erros específicos
     - highlights: O que acertou/errou
     """
+    # Salva o arquivo temporariamente
+    data = await audio.read()
+    suffix = os.path.splitext(audio.filename or "")[1] or ".wav"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(data)
+        audio_path = tmp.name
+
     try:
-        transcription = await _transcrever_upload(audio, provider)
+        # Usa o arquivo salvo para transcrição (Gemini espera caminho de arquivo real)
+        transcription = _transcrever_arquivo(audio_path, provider)
     except Exception as e:
+        try:
+            os.remove(audio_path)
+        except Exception:
+            pass
         return JSONResponse({"error": f"Falha na transcrição ({provider}): {e}"}, status_code=400)
 
-    # Avaliar com IA ou método tradicional
-    if ai_scoring:
-        score_result = pronunciation_score_with_ai(
-            target_word, 
-            transcription, 
-            provider=scoring_provider,
-            language=language
-        )
-    else:
-        score_result = pronunciation_score(target_word, transcription)
-    
-    # Adicionar metadados
+    try:
+        if ai_scoring:
+            score_result = pronunciation_score_with_ai(
+                target_word, 
+                transcription, 
+                provider=scoring_provider,
+                language=language
+            )
+        else:
+            score_result = pronunciation_score(target_word, transcription)
+    finally:
+        try:
+            os.remove(audio_path)
+        except Exception:
+            pass
+
     score_result["user_id"] = user_id
     score_result["transcription_provider"] = provider
-    
+    score_result["audio_name"] = audio.filename
+
     return JSONResponse(score_result)
 
 @app.post("/falar")
@@ -252,6 +280,202 @@ FORMATO:
         })
     except Exception as e:
         return JSONResponse({"error": f"Falha ao conversar com tutor: {e}"}, status_code=400)
+
+# -----------------------
+# Catálogo de tarefas e gerador simples
+# -----------------------
+tasks_catalog = {
+	"leitura_rapida": {
+		"title": "Leitura Rápida / Fluência Verbal",
+		"description": "Textos curtos (10–15 segundos) para avaliar velocidade, prosódia e clareza.",
+		"expected_duration_s": 12,
+		"instructions": "Leia o texto em voz alta de forma natural, sem pausas longas.",
+		"samples": [
+			"O rato roeu a roupa do rei de Roma.",
+			"O sol nasceu e a cidade acordou.",
+			"Hoje a escola terá aula de música e pintura."
+		]
+	},
+	"repeticao_fonemas": {
+		"title": "Repetição de Fonemas e Pares Mínimos",
+		"description": "Contraste de fonemas e pares mínimos para discriminação e articulação.",
+		"expected_duration_s": 6,
+		"instructions": "Repita cada par claramente, com espaço entre as palavras.",
+		"samples": [
+			"papa / baba", "pato / batô", "sapo / xapo", "casa / caça"
+		]
+	},
+	"leitura_palavras": {
+		"title": "Leitura de Palavras e Pseudopalavras",
+		"description": "Listas misturando palavras reais e pseudopalavras.",
+		"expected_duration_s": 8,
+		"instructions": "Leia a lista de palavras em voz alta, tentando manter ritmo constante.",
+		"samples": [
+			"gato, casa, pindó, maral, tromba", "festa, bico, lapor, suven"
+		]
+	},
+	"frases_curtas": {
+		"title": "Frases Curtas de Repetição / Leitura",
+		"description": "Frases simples para avaliar memória verbal, articulação e prosódia.",
+		"expected_duration_s": 5,
+		"instructions": "Repita cada frase exatamente como ouvido ou leia em voz alta.",
+		"samples": [
+			"Ela abriu a janela.", "O menino comprou pão.", "Passa o sal, por favor."
+		]
+	},
+	"repeticao_silabas": {
+		"title": "Repetição de Sílabas e Trava-línguas",
+		"description": "Sequências silábicas e trava-línguas para velocidade e coordenação.",
+		"expected_duration_s": 6,
+		"instructions": "Repita a sequência rapidamente e de forma contínua.",
+		"samples": [
+			"pa pe pi po pu", "três tigres tristes", "pinga a pipoca na panela"
+		]
+	}
+}
+
+def _extract_target_words(text: str, category: str):
+	"""Heurística simples para extrair possíveis alvo(s) de cada item."""
+	import re
+	category = (category or "").lower()
+	if category == "repeticao_fonemas":
+		# pares separados por /
+		if "/" in text:
+			parts = [p.strip() for p in text.split("/")]
+			return parts
+		return [w.strip() for w in re.split(r"[,\s]+", text) if w.strip()]
+	if category == "leitura_palavras":
+		# palavras separadas por vírgula
+		return [w.strip() for w in text.split(",") if w.strip()]
+	if category == "repeticao_silabas":
+		# retorna sílabas/words
+		return [w.strip() for w in re.split(r"[,\s]+", text) if w.strip()]
+	if category == "frases_curtas" or category == "leitura_rapida":
+		# escolher palavras-chaves (substantivos/verbos) - heurística: words >3 chars
+		words = [w.strip(".,") for w in text.split() if len(w.strip(".,") ) > 3]
+		return words[:3] if words else [text]
+	return [text]
+
+def _generate_texts(category: str, count: int = 5, age_group: str = "adulto", difficulty: str = "medio", include_meta: bool = False):
+	"""
+	Gerador simples sem IA para criar variações de itens por categoria.
+	- agora suportando include_meta: quando True, retorna dicts com meta úteis.
+	"""
+	import random
+	if category not in tasks_catalog:
+		raise ValueError("Categoria desconhecida")
+
+	samples = tasks_catalog[category]["samples"]
+	out = []
+
+	# parâmetros simples para ajuste de comprimento e complexidade
+	word_multiplier = 1
+	if age_group == "infantil":
+		word_multiplier = 1
+	elif age_group == "juvenil":
+		word_multiplier = 1.3
+	else:
+		word_multiplier = 1.6
+
+	if difficulty == "facil":
+		word_multiplier *= 0.9
+	elif difficulty == "dificil":
+		word_multiplier *= 1.2
+
+	# Geração por categoria (regras simples)
+	for i in range(count):
+		item_text = ""
+		if category == "leitura_rapida":
+			parts = [random.choice(samples) for _ in range(max(1, int(word_multiplier)))]
+			item_text = " ".join(parts)
+		elif category == "repeticao_fonemas":
+			p = random.choice(samples)
+			if random.random() < 0.5:
+				item_text = p
+			else:
+				a, b = p.split("/") if "/" in p else (p, p)
+				item_text = f"{a.strip()} / {b.strip()}"
+		elif category == "leitura_palavras":
+			words = []
+			for _ in range(max(4, int(4 * word_multiplier))):
+				w = random.choice(random.choice(samples).split(","))
+				words.append(w.strip())
+			item_text = ", ".join(words)
+		elif category == "frases_curtas":
+			base = random.choice(samples)
+			if random.random() < 0.5:
+				item_text = base
+			else:
+				item_text = base + " " + random.choice(["Ela sorriu.", "Ele caminhou.", "O vento soprou."])
+		elif category == "repeticao_silabas":
+			if random.random() < 0.6:
+				item_text = " ".join([random.choice(samples).split()[0] for _ in range(max(3, int(3 * word_multiplier)))])
+			else:
+				item_text = random.choice(samples)
+		else:
+			item_text = random.choice(samples)
+
+		if include_meta:
+			meta = {
+				"text": item_text,
+				"target_words": _extract_target_words(item_text, category),
+				"instructions": tasks_catalog[category].get("instructions", ""),
+				"estimated_duration_s": tasks_catalog[category].get("expected_duration_s", None)
+			}
+			out.append(meta)
+		else:
+			out.append(item_text)
+
+	# garante unicidade simples
+	seen = set()
+	unique_out = []
+	for t in out:
+		# t pode ser dict ou str
+		key = t["text"] if isinstance(t, dict) else t
+		if key not in seen:
+			unique_out.append(t)
+			seen.add(key)
+	return unique_out
+
+# -----------------------
+# Novos endpoints: listar e gerar tarefas
+# -----------------------
+@app.get("/tarefas")
+async def listar_tarefas():
+	"""Retorna as categorias de tarefas e metadados (nome, descrição, número de exemplos)."""
+	result = {
+		k: {
+			"title": v["title"],
+			"description": v["description"],
+			"sample_count": len(v.get("samples", []))
+		}
+		for k, v in tasks_catalog.items()
+	}
+	return JSONResponse(result)
+
+@app.post("/tarefas/gerar")
+async def gerar_tarefas(
+	category: str = Form(...),                # chave da categoria (ex: leitura_rapida)
+	count: int = Form(5),                     # quantos itens gerar
+	age_group: str = Form("adulto"),          # infantil | juvenil | adulto
+	difficulty: str = Form("medio"),          # facil | medio | dificil
+	include_meta: bool = Form(False)          # se true, retorna objetos com meta (target_words, instructions...)
+):
+	"""Gera N textos/itens para a categoria solicitada (sem uso de IA)."""
+	category = (category or "").strip().lower()
+	if category not in tasks_catalog:
+		return JSONResponse({"error": "Categoria desconhecida", "available": list(tasks_catalog.keys())}, status_code=400)
+	try:
+		texts = _generate_texts(category, count=count, age_group=age_group, difficulty=difficulty, include_meta=include_meta)
+		return JSONResponse({
+			"category": category,
+			"title": tasks_catalog[category]["title"],
+			"age_group": age_group,
+			"difficulty": difficulty,
+			"items": texts
+		})
+	except Exception as e:
+		return JSONResponse({"error": f"Falha ao gerar tarefas: {e}"}, status_code=500)
 
 @app.get("/")
 async def root():

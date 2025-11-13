@@ -4,7 +4,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.68+-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-Sistema inteligente para avaliação automática de pronúncia utilizando múltiplos modelos de Speech-to-Text (STT), algoritmos de similaridade textual e recursos de IA generativa, incluindo integração com o modelo Gemini (Google).
+Sistema inteligente para avaliação automática de pronúncia utilizando múltiplos modelos de Speech-to-Text (STT) e IA generativa. Esta versão dá prioridade à integração com o Gemini (Google) para transcrição e avaliação qualitativa.
 
 ## 📖 Sobre o Projeto
 
@@ -135,75 +135,136 @@ Para gerar relatório de cobertura:
 pytest --cov=../core --cov=../../models --cov-report=html
 ```
 
-## 🤖 Modelos e IAs Suportados
+## 🤖 Atualização e detalhes sobre IA (Gemini)
 
-### 1. **Whisper** (Padrão)
+Nesta implementação o Gemini é o provedor padrão para duas etapas críticas:
+1. Transcrição (quando configurado) — GeminiTranscriber
+2. Avaliação qualitativa / feedback — GeminiChat via pronunciation_score_with_ai
 
-- Modelo: `openai/whisper-small`
-- Características: Alta precisão, multilíngue
-- Uso: Ideal para uso geral
+Principais pontos:
+- Gemini é usado por padrão para garantir consistência com a versão testada localmente.
+- Ainda há suporte a OpenAI (whisper, chat) via classes OpenAITranscriber / OpenAIChat; escolha configurável por endpoint.
+- Para ambientes com recursos limitados, há opção de transcrever localmente (Whisper) — porém no projeto padrão local o Whisper está desabilitado por RAM e Gemini é priorizado.
 
-### 2. **Wav2Vec2**
+### Variáveis de ambiente e chaves
+Configure suas chaves no ambiente antes de rodar:
+- GEMINI_API_KEY — chave para acessar Gemini (se aplicável à integração)
+- OPENAI_API_KEY — chave OpenAI (opcional, se usar OpenAI)
+- OUTRAS — quaisquer variáveis exigidas por wrappers de modelo (ex.: PATH para modelos locais)
 
-- Modelo: `jonatasgrosman/wav2vec2-large-xlsr-53-portuguese`
-- Características: Otimizado para português
-- Uso: Melhor para áudio em português
+Exemplo (PowerShell):
+```powershell
+$env:GEMINI_API_KEY="sua_chave_gemini"
+$env:OPENAI_API_KEY="sua_chave_openai"
+```
 
-### 3. **DeepSpeech**
+### Fluxo de transcrição e avaliação
+1. O endpoint recebe um upload via `multipart/form-data` com o campo `audio` (arquivo real).
+2. O arquivo é salvo temporariamente no servidor (tempfile).
+3. A função `_transcrever_arquivo(caminho_tmp, provedor)` chama o transcriber apropriado:
+   - provedor == "gemini" → GeminiTranscriber.transcribe(caminho_tmp)
+   - provedor == "openai" → OpenAITranscriber.transcribe(caminho_tmp)
+   - Caso whisper fosse habilitado, poderia usar whisper_model.transcribe(...)
+4. O texto transcrito é enviado para `pronunciation_score_with_ai(...)` que usa o chat LLM para gerar feedback detalhado, sugestões e score final.
+5. Resposta JSON com score, feedback, highlights e metadados.
 
-- Características: Leve, rápido
-- Uso: Cenários com recursos limitados
+### Como forçar Gemini na API
+- Padrão flexível (recomendado): parâmetros `provider` e `scoring_provider` com default `"gemini"`.
+- Forçar no código (sempre usar Gemini): defina internamente
+```python
+provider = "gemini"
+scoring_provider = "gemini"
+```
 
-### 4. **Coqui STT**
+### Exemplo de uso — Swagger (UI)
+1. Acesse `http://127.0.0.1:8000/docs`
+2. Trabalhe no endpoint `POST /avaliar`
+3. Clique em "Try it out"
+4. Preencha `user_id`, `target_word`, `ai_scoring` etc.
+5. No campo `audio` clique em "Choose File" e selecione seu `.opus`/`.wav`
+6. Execute (Execute) — atenção: o upload deve ser arquivo real (não JSON)
 
-- Características: Open source, personalizável
-- Uso: Implementações customizadas
+### Exemplo de uso — curl (multipart/form-data)
+Enviar arquivo e usar Gemini:
+```bash
+curl -X POST "http://127.0.0.1:8000/avaliar" \
+  -H "accept: application/json" \
+  -F "user_id=user123" \
+  -F "target_word=Testando" \
+  -F "audio=@C:/caminho/para/teste.opus" \
+  -F "ai_scoring=true" \
+  -F "language=português"
+```
 
+Se você enviar JSON (Content-Type: application/json ou x-www-form-urlencoded) em vez de multipart/form-data, receberá 422 Unprocessable Entity — sempre use `-F` ou o upload do Swagger.
 
-### 5. **Faster Whisper**
+### Teste local (sem rodar a API)
+Há um script `test_local.py` para validar GeminiTranscriber e a pipeline de scoring fora da API:
+```bash
+python test_local.py
+```
+Ajuste `audio_path` no topo do script para apontar ao seu arquivo local (`audioteste/teste.opus`) e defina `scoring_provider="gemini"` para replicar o comportamento da API.
 
-- Características: Versão otimizada do Whisper
-- Uso: Melhor performance em produção
+### Logs e debug
+- Rode o servidor com `--reload` para desenvolvimento:
+  ```bash
+  uvicorn app.api.main:app --reload --host 127.0.0.1 --port 8000
+  ```
+- Verifique mensagens no terminal do uvicorn para erros de transcrição, chaves ausentes ou falhas de integração com Gemini/OpenAI.
+- Ative prints ou logging no `modelos.py` e `scoring.py` para inspecionar payloads.
 
-### 6. **Gemini (Google)**
+### Troubleshooting (erros comuns)
+- 422 Unprocessable Entity: request não está em multipart/form-data com campo `audio` como arquivo.  
+- "Field required" no Swagger: certifique-se de clicar em "Choose File" para `audio` e não colar JSON/objeto.  
+- Arquivo vazio / transcrição vazia: confirme que `audio.read()` foi chamado apenas uma vez ou que salvou antes de passar para transcriber.  
+- Erro de chave / 401: verifique variáveis de ambiente e permissões na conta do provedor.  
+- GeminiTranscriber falhando localmente: teste com `test_local.py` e habilite logs no wrapper de modelo.
 
-- Modelo de IA generativa de última geração
-- Utilizado para análise semântica, feedback textual e geração de relatórios
-- Permite respostas mais naturais e contextualizadas
+### Custos, limites e performance
+- Gemini / OpenAI usage may incur costs. Teste com amostras curtas e monitore requests.
+- Para produção, considere:
+  - Limitar tamanho do upload
+  - Queue/worker para processamento assíncrono
+  - Cache de transcrições quando apropriado
+  - Monitoramento e alertas para quotas
 
-## 📊 Sistema de Pontuação
+### Boas práticas de produção
+- Não execute modelos pesados diretamente no servidor HTTP; use workers/process queue.
+- Remova arquivos temporários imediatamente após uso (ex.: bloco finally com os.remove).
+- Configure timeouts e retries para chamadas externas ao provedor.
+- Habilite autenticação para os endpoints da API.
 
-O sistema utiliza uma combinação de métricas:
+### Resposta típica do endpoint /avaliar
+Exemplo de saída:
+```json
+{
+  "score": 82.5,
+  "similarity": 85.0,
+  "feedback": "Boa entonação, ajuste no som /r/ final...",
+  "suggestions": ["Pratique com minimal pairs: ...", "Use exercício X..."],
+  "user_id": "user123",
+  "transcription_provider": "gemini",
+  "audio_name": "teste.opus"
+}
+```
 
-- **Similaridade**: Baseada na distância de Levenshtein (0-100%)
-- **Match Exato**: Bonificação para correspondência perfeita
-- **Score Final**: `0.8 × similaridade + 0.2 × match_exato`
+## ⚙️ Execução rápida (recapitulando)
+1. Ative venv:
+   ```powershell
+   .\.venv\Scripts\activate
+   ```
+2. Exporte chaves:
+   ```powershell
+   $env:GEMINI_API_KEY="sua_chave_gemini"
+   ```
+3. Rode:
+   ```bash
+   uvicorn app.api.main:app --reload --host 127.0.0.1 --port 8000
+   ```
+4. Teste no Swagger `/docs` (upload do arquivo como arquivo).
 
-## 🛠️ Desenvolvimento
-
-### Estrutura de Desenvolvimento
-
-1. **Adicionando novos modelos**: Implemente uma nova classe em `models/modelos.py`
-2. **Novos algoritmos de scoring**: Adicione em `app/core/scoring.py`
-3. **Testes**: Crie testes correspondentes em `app/tests/`
-
-### Contribuindo
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
-3. Commit suas mudanças (`git commit -am 'Adiciona nova feature'`)
-4. Push para a branch (`git push origin feature/nova-feature`)
-5. Abra um Pull Request
-
-## 📝 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-
-## 👥 Equipe
-
-- **Desenvolvedores**: Álvaro Sampaio, Diego Rodrigues, Pedro Bressan
-- **Curso**: C317 - Inteligência Artificial
+## 📝 Contato e suporte
+- Abra uma issue no repositório ou envie e-mail para suporte@exemplo.com
 
 ## � Como Citar
 

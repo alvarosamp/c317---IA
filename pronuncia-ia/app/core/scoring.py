@@ -1,5 +1,30 @@
-from Levenshtein import distance as lev
 import json
+_lev_source = None
+try:
+    # Prefer python-Levenshtein (fast C implementation)
+    from Levenshtein import distance as lev
+    _lev_source = "python-Levenshtein"
+except Exception:
+    try:
+        # Fallback to rapidfuzz if available
+        from rapidfuzz.distance import Levenshtein as _rlev
+        def lev(a, b):
+            return _rlev.distance(a, b)
+        _lev_source = "rapidfuzz"
+    except Exception:
+        # Final fallback: use difflib (pure-Python, slower and returns ratio -> convert to distance)
+        import difflib
+        def lev(a, b):
+            if not a and not b:
+                return 0
+            ratio = difflib.SequenceMatcher(None, a, b).ratio()
+            # Convert similarity ratio to an integer distance approximating Levenshtein
+            return int(round((1.0 - ratio) * max(len(a), len(b))))
+        _lev_source = "difflib"
+
+print(f"[DEBUG] Using Levenshtein implementation: {_lev_source}")
+
+import os
 import os
 import sys
 from pathlib import Path

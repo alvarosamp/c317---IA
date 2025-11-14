@@ -1,0 +1,80 @@
+{
+  "leitura_rapida": {
+    "key": "leitura_rapida",
+    "title": "Leitura Rápida / Fluência Verbal",
+    "category": "leitura_rapida",
+    "samples": [
+      "O rato roeu a roupa do rei de Roma.",
+      "O sol nasceu e a cidade acordou.",
+      "Hoje a escola terá aula de música e pintura."
+    ],
+    "expected_duration_s": 12,
+    "instructions": "Leia o texto em voz alta de forma natural, sem pausas longas.",
+    "suggested_threshold": 65
+  },
+  "trava_linguas": {
+    "key": "trava_linguas",
+    "title": "Trava-línguas",
+    "category": "trava_linguas",
+    "samples": [
+      "Três pratos de trigo para três tigres tristes",
+      "O rato roeu a roupa do rei de Roma",
+      "Pão com massa, passa a massa no pano"
+    ],
+    "expected_duration_s": 8,
+    "instructions": "Repita o trava-línguas rapidamente mantendo clareza articulatória.",
+    "suggested_threshold": 70
+  },
+  "frases_curtas": {
+    "key": "frases_curtas",
+    "title": "Frases Curtas de Repetição / Leitura",
+    "category": "frases_curtas",
+    "samples": [
+      "Ela abriu a janela.",
+      "O menino comprou pão.",
+      "Passa o sal, por favor."
+    ],
+    "expected_duration_s": 5,
+    "instructions": "Repita cada frase exatamente como ouvido ou leia em voz alta.",
+    "suggested_threshold": 60
+  },
+  "repeticao_fonemas": {
+    "key": "repeticao_fonemas",
+    "title": "Repetição de Fonemas e Pares Mínimos",
+    "category": "repeticao_fonemas",
+    "samples": ["papa / baba", "pato / bato", "sapo / xapo", "casa / caça"],
+    "expected_duration_s": 6,
+    "instructions": "Repita cada par claramente, com espaço entre as palavras.",
+    "suggested_threshold": 70
+  },
+  "leitura_palavras": {
+    "key": "leitura_palavras",
+    "title": "Leitura de Palavras e Pseudopalavras",
+    "category": "leitura_palavras",
+    "samples": ["gato, casa, pindó, maral, tromba", "festa, bico, lapor, suven"],
+    "expected_duration_s": 8,
+    "instructions": "Leia a lista de palavras em voz alta, tentando manter ritmo constante.",
+    "suggested_threshold": 65
+  },
+  "repeticao_silabas": {
+    "key": "repeticao_silabas",
+    "title": "Repetição de Sílabas",
+    "category": "repeticao_silabas",
+    "samples": ["pa pe pi po pu", "três tigres tristes", "pinga a pipoca na panela"],
+    "expected_duration_s": 6,
+    "instructions": "Repita a sequência rapidamente e de forma contínua.",
+    "suggested_threshold": 60
+  },
+  "trava_linguas_progressiva": {
+    "key": "trava_linguas_progressiva",
+    "title": "Trava-línguas com Progressão Silábica",
+    "category": "trava_linguas_progressiva",
+    "samples": [
+      "pa pe pi po pu - pa pe pi po pu - pa pe pi po pu",
+      "três tigres tristes tricotando três tricôs"
+    ],
+    "expected_duration_s": 10,
+    "instructions": "Execute a progressão começando devagar e aumentando a velocidade mantendo clareza.",
+    "suggested_threshold": 72
+  }
+}

@@ -1,0 +1,8 @@
+key,title,category,expected_duration_s,instructions,samples,suggested_threshold
+leitura_rapida,"Leitura Rápida / Fluência Verbal",leitura_rapida,12,"Leia o texto em voz alta de forma natural, sem pausas longas.","O rato roeu a roupa do rei de Roma.|O sol nasceu e a cidade acordou.|Hoje a escola terá aula de música e pintura.",65
+trava_linguas,Trava-línguas,trava_linguas,8,"Repita o trava-línguas rapidamente mantendo clareza articulatória.","Três pratos de trigo para três tigres tristes|O rato roeu a roupa do rei de Roma|Pão com massa, passa a massa no pano",70
+frases_curtas,"Frases Curtas de Repetição / Leitura",frases_curtas,5,"Repita cada frase exatamente como ouvido ou leia em voz alta.","Ela abriu a janela.|O menino comprou pão.|Passa o sal, por favor.",60
+repeticao_fonemas,"Repetição de Fonemas e Pares Mínimos",repeticao_fonemas,6,"Repita cada par claramente, com espaço entre as palavras.","papa / baba|pato / bato|sapo / xapo|casa / caça",70
+leitura_palavras,"Leitura de Palavras e Pseudopalavras",leitura_palavras,8,"Leia a lista de palavras em voz alta, tentando manter ritmo constante.","gato, casa, pindó, maral, tromba|festa, bico, lapor, suven",65
+repeticao_silabas,"Repetição de Sílabas",repeticao_silabas,6,"Repita a sequência rapidamente e de forma contínua.","pa pe pi po pu|três tigres tristes|pinga a pipoca na panela",60
+trava_linguas_progressiva,"Trava-línguas com Progressão Silábica",trava_linguas_progressiva,10,"Execute a progressão começando devagar e aumentando a velocidade mantendo clareza.","pa pe pi po pu - pa pe pi po pu - pa pe pi po pu|três tigres tristes tricotando três tricôs",72

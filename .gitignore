@@ -1,0 +1,52 @@
+.env
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.python-version
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# macOS
+.DS_Store
+
+# Editor dirs
+.vscode/
+.idea/
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# Uploads and temporary files
+uploads/
+tmp/
+*.tmp
+*.temp
+
+# Coverage
+htmlcov/
+.coverage
+
+# Node/npm
+node_modules/
+
+# JetBrains
+*.iml
+
+# other
+dist/
+build/
+
+# Ensure .env is ignored (sensitive keys)
+.env
+.env.*
+
+# Keep any project-specific exceptions below
+# Example: if you intentionally want to track .env.example, keep it committed
+!.env.example

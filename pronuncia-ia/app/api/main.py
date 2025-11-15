@@ -15,6 +15,32 @@ import pathlib
 import tempfile
 import uuid
 import base64
+from pathlib import Path
+
+# Carregar variáveis de ambiente o mais cedo possível
+try:
+    from dotenv import load_dotenv
+    # Tenta múltiplos caminhos para .env para suportar execuções diferentes
+    possible_envs = [
+        Path(__file__).parent.parent.parent / ".env",        # pronuncia-ia/.env
+        Path(__file__).resolve().parents[3] / ".env",         # repo root .env (c317---IA/.env)
+        Path.cwd() / ".env",                                  # cwd/.env
+    ]
+    _env_loaded = None
+    for p in possible_envs:
+        try:
+            if p.exists():
+                load_dotenv(dotenv_path=p)
+                _env_loaded = p
+                break
+        except Exception:
+            continue
+    if _env_loaded:
+        print(f"[DEBUG] main.py: .env carregado de {_env_loaded}")
+    else:
+        print(f"[DEBUG] main.py: nenhum .env encontrado em {[str(p) for p in possible_envs]}")
+except Exception as _e:
+    print(f"[DEBUG] main.py: falha ao carregar .env antecipadamente: {_e}")
 
 # Add the parent directory (or its parent) to sys.path to resolve 'scoring' import
 core_path = pathlib.Path(__file__).parent.parent / "core"
@@ -57,6 +83,27 @@ app = FastAPI(
     version="2.0.0"
 )
 
+
+@app.get("/debug_env")
+async def debug_env():
+    """Endpoint temporário para verificar se as chaves de API estão visíveis no processo.
+
+    Retorna booleans e um valor mascarado (primeiros 6 chars) para ajudar debug sem expor a chave inteira.
+    """
+    def mask(v: str | None) -> str | None:
+        if not v:
+            return None
+        return v[:6] + "..." if len(v) > 6 else "***"
+
+    gem = os.getenv("GEMINI_API_KEY")
+    goo = os.getenv("GOOGLE_API_KEY")
+    return JSONResponse({
+        "GEMINI_present": bool(gem),
+        "GOOGLE_present": bool(goo),
+        "GEMINI_masked": mask(gem),
+        "GOOGLE_masked": mask(goo),
+        "python_executable": sys.executable,
+    })
 # Modelo principal de transcrição (local, grátis, razoavelmente preciso)
 # DESABILITADO: Whisper local consome muita RAM
 # whisper_model = Whisper(device='cpu')  # Use 'cuda' se tiver GPU

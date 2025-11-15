@@ -168,7 +168,48 @@ class GeminiTranscriber:
         if not api_key:
             raise RuntimeError("GOOGLE_API_KEY/GEMINI_API_KEY não configurada no ambiente.")
         genai.configure(api_key=api_key)
-        self.model_name = model or os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        # Prefer explicit model arg, then GEMINI_MODEL env, otherwise try to pick a supported model
+        self.model_name = model or os.getenv("GEMINI_MODEL")
+        if not self.model_name:
+            # Try to pick a sensible default from the account's available models
+            try:
+                # Prefer models that support generateContent for our transcribe flow
+                preferred = [
+                    "models/gemini-2.5-flash",
+                    "models/gemini-2.5-pro",
+                    "models/gemini-flash-latest",
+                    # native-audio models may require bidiGenerateContent; try them after generateContent-capable models
+                    "models/gemini-2.5-flash-native-audio-latest",
+                    "models/gemini-2.0-flash",
+                ]
+                available = {}
+                for m in genai.list_models():
+                    name = getattr(m, "name", None) or getattr(m, "model", None) or getattr(m, "id", None)
+                    methods = getattr(m, "supported_generation_methods", None)
+                    if name:
+                        available[name] = methods or []
+
+                # choose first preferred that is available and supports generateContent/bidiGenerateContent
+                for p in preferred:
+                    if p in available and any(x in available[p] for x in ("generateContent", "bidiGenerateContent", "batchGenerateContent")):
+                        self.model_name = p
+                        break
+
+                # fallback: pick any model that supports generateContent
+                if not self.model_name:
+                    for name, methods in available.items():
+                        if any(x in methods for x in ("generateContent", "bidiGenerateContent", "batchGenerateContent")):
+                            self.model_name = name
+                            break
+            except Exception:
+                # If listing fails for any reason, fall back to a conservative default
+                self.model_name = "gemini-1.5-flash"
+
+        # final fallback
+        if not self.model_name:
+            self.model_name = "gemini-1.5-flash"
+
+        print(f"[DEBUG] GeminiTranscriber usando modelo: {self.model_name}")
         self.model = genai.GenerativeModel(self.model_name)
 
     def transcribe(self, audio_path: str) -> str:
@@ -222,9 +263,42 @@ class GeminiChat:
         print(f"[DEBUG] ✅ Chave de API encontrada: {api_key[:20]}...")
         
         genai.configure(api_key=api_key)
-        self.model_name = model or os.getenv("GEMINI_CHAT_MODEL", os.getenv("GEMINI_MODEL", "gemini-1.5-flash"))
+
+        # Prefer explicit model arg, then GEMINI_CHAT_MODEL, then GEMINI_MODEL, otherwise pick from available models
+        self.model_name = model or os.getenv("GEMINI_CHAT_MODEL") or os.getenv("GEMINI_MODEL")
+        if not self.model_name:
+            try:
+                # Prefer models that support generateContent for chat
+                preferred = [
+                    "models/gemini-2.5-flash",
+                    "models/gemini-2.5-pro",
+                    "models/gemini-pro-latest",
+                    "models/gemini-flash-latest",
+                ]
+                available = {}
+                for m in genai.list_models():
+                    name = getattr(m, "name", None) or getattr(m, "model", None) or getattr(m, "id", None)
+                    methods = getattr(m, "supported_generation_methods", None)
+                    if name:
+                        available[name] = methods or []
+
+                for p in preferred:
+                    if p in available and any(x in available[p] for x in ("generateContent", "batchGenerateContent")):
+                        self.model_name = p
+                        break
+
+                if not self.model_name:
+                    for name, methods in available.items():
+                        if any(x in methods for x in ("generateContent", "batchGenerateContent")):
+                            self.model_name = name
+                            break
+            except Exception:
+                self.model_name = "gemini-1.5-flash"
+
+        if not self.model_name:
+            self.model_name = "gemini-1.5-flash"
+
         print(f"[DEBUG] 📦 Usando modelo: {self.model_name}")
-        
         self.model = genai.GenerativeModel(self.model_name)
         print(f"[DEBUG] ✅ GeminiChat inicializado com sucesso!")
 

@@ -30,9 +30,31 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Carregar variáveis de ambiente do arquivo .env
-env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
+# Carregar variáveis de ambiente do arquivo .env.
+# Tentamos múltiplos locais para facilitar diferentes formas de executar o servidor
+# 1) ./pronuncia-ia/.env (diretório do serviço)
+# 2) ./c317---IA/.env (repo root - um nível acima)
+# 3) cwd/.env (current working dir)
+possible_envs = [
+    Path(__file__).parent.parent.parent / ".env",  # pronuncia-ia/.env
+    Path(__file__).parent.parent.parent.parent / ".env",  # repo root .env
+    Path.cwd() / ".env",
+]
+
+env_path = None
+for p in possible_envs:
+    try:
+        if p.exists():
+            env_path = p
+            break
+    except Exception:
+        continue
+
+if env_path:
+    load_dotenv(dotenv_path=env_path)
+    print(f"[DEBUG] Carregado .env a partir de: {env_path}")
+else:
+    print(f"[DEBUG] Nenhum .env encontrado em: {[str(p) for p in possible_envs]}")
 
 # Import dos modelos de chat
 models_path = Path(__file__).parent.parent.parent / "models"

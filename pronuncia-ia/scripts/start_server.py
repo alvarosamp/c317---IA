@@ -1,4 +1,5 @@
 """
+
 Script para iniciar o servidor FastAPI
 Execute: python start_server.py
 """

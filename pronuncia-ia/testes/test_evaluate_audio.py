@@ -1,7 +1,4 @@
-"""Teste de envio de áudio ao endpoint /avaliar convertido para Pytest.
 
-Valida upload multipart e resposta básica. Usa provider mock e ai_scoring false.
-"""
 import os
 from pathlib import Path
 import pytest

@@ -1,7 +1,5 @@
 """Testes de integração da API de Avaliação de Pronúncia (Pytest).
 
-Requer servidor FastAPI rodando em http://localhost:8000.
-Cada teste realiza chamada real; se o servidor não estiver ativo os testes serão marcados como pendentes (xfail) ou falharão.
 """
 import os
 import pytest

@@ -668,13 +668,47 @@ async def gerar_tarefas(
     count: int = Form(5),                     # quantos itens gerar
     age_group: str = Form("adulto"),          # infantil | juvenil | adulto
     difficulty: str = Form("medio"),          # facil | medio | dificil
-    include_meta: bool = Form(False)          # se true, retorna objetos com meta (target_words, instructions...)
+    include_meta: bool = Form(False),         # se true, retorna objetos com meta (target_words, instructions...)
+    use_ai: bool = Form(False),                # se true, pede ao Gemini/OpenAI para gerar os itens (JSON)
 ):
-    """Gera N textos/itens para a categoria solicitada (sem uso de IA)."""
+    """Gera N textos/itens para a categoria solicitada (pode usar IA se solicitado)."""
     category = (category or "").strip().lower()
     if category not in tasks_catalog:
         return JSONResponse({"error": "Categoria desconhecida", "available": list(tasks_catalog.keys())}, status_code=400)
     try:
+        # If requested, try to delegate generation to the LLM (Gemini/OpenAI). We ask for strict JSON.
+        if use_ai:
+            system_prompt = (
+                "Você é um gerador de itens pedagógicos. Receba uma categoria e gere exatamente {count} itens no formato JSON: "
+                "[{\"text\": <texto>, \"instructions\": <instruções opcionais>}, ...]. Sempre retorne JSON válido sem explicações extras."
+            )
+            human = f"Categoria: {category}. Gere {count} itens curtos adequados para a categoria. Dê preferência a frases naturais em português."
+            try:
+                reply = _resposta_chat_texto(human, "gemini", system_prompt)
+                import json
+                try:
+                    items = json.loads(reply)
+                    # normalize: if items are strings convert to dicts
+                    normalized = []
+                    for it in items:
+                        if isinstance(it, str):
+                            normalized.append({"text": it})
+                        elif isinstance(it, dict):
+                            normalized.append(it)
+                    return JSONResponse({
+                        "category": category,
+                        "title": tasks_catalog[category]["title"],
+                        "age_group": age_group,
+                        "difficulty": difficulty,
+                        "items": normalized
+                    })
+                except Exception:
+                    # LLM did not return proper JSON; fallback to builtin generator
+                    pass
+            except Exception:
+                # if LLM call fails, continue to fallback
+                pass
+
         texts = _generate_texts(category, count=count, age_group=age_group, difficulty=difficulty, include_meta=include_meta)
         return JSONResponse({
             "category": category,

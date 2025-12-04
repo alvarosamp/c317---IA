@@ -9,8 +9,10 @@ pydantic==2.10.3
 
 # Machine Learning & IA
 transformers==4.47.1
-torch==2.5.1
-torchaudio==2.5.1
+# Em macOS (especialmente Apple Silicon), as wheels oficiais disponíveis no PyPI
+# vão até a série 2.2.x. Fixamos 2.2.2 para garantir instalação estável.
+torch==2.2.2
+torchaudio==2.2.2
 librosa==0.10.2.post1
 soundfile==0.12.1
 
